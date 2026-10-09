@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% set iid = request.view_args['id_'] %}
+    <title>NinoPort · #{{ iid }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- AI 的回复按 markdown 渲染：marked 负责解析，DOMPurify 负责消毒 ——
+         模型吐出来的原始 HTML 一律不许直接进 DOM。
+         两个都走 CDN；拉不到就静默退回纯文本，不报错、不空白 -->
+    <script defer src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
+</head>
+<body>
+
+<div class="chat-shell">
+
+    <header class="chat-topbar">
+        <a class="icon-btn" href="/" title="返回实例列表" aria-label="返回实例列表">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+        </a>
+        <div class="chat-title">
+            <span class="chat-id">#{{ iid }}</span>
+            <span class="chat-sub">NinoPort</span>
+        </div>
+    </header>
+
+    <main class="chat-scroll" id="chat-scroll">
+        <div class="chat-inner" id="message-list">
+
+            {% if message_type_list | length == 0 %}
+                <div class="chat-empty" id="chat-empty">
+                    <svg class="empty-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"
+                         aria-hidden="true">
+                        <path d="M20 12a7.5 7.5 0 0 1-7.5 7.5H8l-4 3v-4.6A7.5 7.5 0 0 1 12.5 4.5 7.5 7.5 0 0 1 20 12Z"/>
+                    </svg>
+                    <p class="chat-empty-title">还是空的，说点什么吧</p>
+                </div>
+            {% endif %}
+
+            {% for idx in range(message_type_list | length) %}
+                {% set role = message_type_list[idx] %}
+                {% set text = message_context_list[idx] %}
+                {% set is_err = role == 'assistant' and text.startswith('AI错误') %}
+                <div class="msg-row {{ 'msg-user' if role == 'user' else 'msg-ai' }}">
+                    <div class="bubble{{ ' is-error' if is_err else '' }}">
+                        <div class="bubble-role">{{ '你' if role == 'user' else ('错误' if is_err else 'AI') }}</div>
+                        {# 只有正常的 AI 回复走 markdown；你说的、报错的都保持原样 #}
+                        <div class="bubble-text{{ ' js-md' if role == 'assistant' and not is_err else '' }}">{{ text }}</div>
+                    </div>
+                </div>
+            {% endfor %}
+
+        </div>
+    </main>
+
+    <form class="composer" id="chat-form" method="post"
+          action="{{ url_for('send', id_=iid) }}">
+        <div class="composer-inner">
+            <textarea class="composer-input" id="chat-input" name="user-input" rows="1"
+                      placeholder="给这个实例发一条消息…" autocomplete="off"
+                      spellcheck="false" required></textarea>
+            <button class="btn btn-primary btn-send" type="submit" id="send-btn"
+                    title="发送" aria-label="发送">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 19V5M5 12l7-7 7 7"/>
+                </svg>
+            </button>
+        </div>
+        <p class="composer-hint">Enter 发送 · Shift + Enter 换行</p>
+    </form>
+
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    var form    = document.getElementById('chat-form');
+    var input   = document.getElementById('chat-input');
+    var list    = document.getElementById('message-list');
+    var scroll  = document.getElementById('chat-scroll');
+    var sendBtn = document.getElementById('send-btn');
+    var locked  = false;
+
+    try { history.scrollRestoration = 'manual'; } catch (e) {}
+
+    function scrollToBottom() {
+        scroll.scrollTop = scroll.scrollHeight;
+    }
+
+    /* ── AI 的回复：markdown → HTML ───────────────────────────────────
+       两条都不能省：marked 管解析，DOMPurify 管消毒。
+       模型是可以吐 <script> 和 onerror= 的，不消毒等于把它请进家里。
+
+       ⚠️ 这里必须「用的时候再问库在不在」，不能在这个 IIFE 里提前拍板：
+       这段脚本是 body 末尾的普通内联脚本，跑在解析期；带 defer 的
+       CDN 脚本要等解析完才执行 —— 提前判一次必然全是 undefined，
+       然后就永远渲染不出来了（踩过：页面上 `**Pinpe**` 原样躺着） */
+    var mdConfigured = false;
+
+    function mdOk() {
+        if (!window.marked || !window.DOMPurify || !marked.parse) { return false; }
+        if (!mdConfigured) {
+            marked.use({ gfm: true, breaks: true });   /* 表格/删除线 + 单个换行也断行 */
+            mdConfigured = true;
+        }
+        return true;
+    }
+
+    function renderMd(el) {
+        if (el.dataset.mdDone === '1') { return; }
+        el.dataset.mdDone = '1';
+        if (!mdOk()) { return; }                   /* CDN 没拉到：保持纯文本，不折腾 */
+        el.innerHTML = DOMPurify.sanitize(marked.parse(el.textContent));
+        el.classList.add('md');
+    }
+
+    function renderAllMd(root) {
+        var list = (root || document).querySelectorAll('.bubble-text.js-md');
+        for (var i = 0; i < list.length; i++) { renderMd(list[i]); }
+    }
+
+    /* ── 你来我往的气泡 ──────────────────────────────────────────────── */
+    function bubble(role, label, text, extraClass) {
+        var row = document.createElement('div');
+        row.className = 'msg-row ' + role;
+
+        var b = document.createElement('div');
+        b.className = 'bubble' + (extraClass ? ' ' + extraClass : '');
+
+        var r = document.createElement('div');
+        r.className = 'bubble-role';
+        r.textContent = label;
+
+        var t = document.createElement('div');
+        t.className = 'bubble-text';
+        t.textContent = text;   /* 用 textContent，不解析 HTML */
+
+        b.appendChild(r);
+        b.appendChild(t);
+        row.appendChild(b);
+        return row;
+    }
+
+    function waitingBubble() {
+        var row = document.createElement('div');
+        row.className = 'msg-row msg-ai';
+        row.id = 'waiting-row';
+
+        var b = document.createElement('div');
+        b.className = 'bubble is-waiting';
+
+        var r = document.createElement('div');
+        r.className = 'bubble-role';
+        r.textContent = 'AI';
+
+        var wrap = document.createElement('div');
+        wrap.className = 'bubble-text waiting-line';   /* 间距在 CSS 里管 */
+
+        var label = document.createElement('span');
+        label.textContent = '正在回复';
+
+        var dots = document.createElement('span');
+        dots.className = 'dots';
+        dots.innerHTML = '<i></i><i></i><i></i>';
+
+        wrap.appendChild(label);
+        wrap.appendChild(dots);
+        b.appendChild(r);
+        b.appendChild(wrap);
+        row.appendChild(b);
+        return row;
+    }
+
+    /* ── 发送：先把消息摆上屏幕，再真的提交 ───────────────────────────── */
+    form.addEventListener('submit', function (e) {
+        if (locked) { e.preventDefault(); return; }
+
+        var text = input.value.trim();
+        if (!text) { e.preventDefault(); return; }
+
+        /* 拦下这次提交，自己先画出来 */
+        e.preventDefault();
+
+        var empty = document.getElementById('chat-empty');
+        if (empty) { empty.remove(); }
+
+        list.appendChild(bubble('msg-user', '你', text));
+        list.appendChild(waitingBubble());
+        scrollToBottom();
+
+        locked = true;
+        /* ⚠️ 这里绝不能清空、也不能 disable：禁用的控件浏览器根本不提交，
+           把 value 清成 '' 等于发个空串 —— 原来这两行把消息整个吃掉，
+           服务端 request.form.get('user-input') 拿到 None，上下文里存下一排
+           「你 None」。要锁住输入用 readOnly：只读控件照常提交 */
+        input.readOnly = true;
+        sendBtn.disabled = true;
+
+        /* 用原生 submit 走真正的 POST —— 服务端要等 AI 答完才返回，
+           这段时间屏幕上已经有你刚发的那条了 */
+        requestAnimationFrame(function () { form.submit(); });
+    });
+
+    /* ── 输入框：Enter 发送、自动长高 ─────────────────────────────────── */
+    function autoGrow() {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 168) + 'px';
+    }
+
+    input.addEventListener('input', autoGrow);
+
+    input.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' || e.shiftKey) { return; }
+        if (e.isComposing || e.keyCode === 229) { return; }  /* 中文输入法选词中 */
+        e.preventDefault();
+        if (form.requestSubmit) { form.requestSubmit(); }
+        else { form.submit(); }
+    });
+
+    /* 历史消息里的 AI 回复：等 CDN 那两个脚本落位（defer 保证在
+       DOMContentLoaded 之前执行完）再渲染，渲染完内容会变高，再滚一次底 */
+    window.addEventListener('DOMContentLoaded', function () {
+        renderAllMd(document);
+        scrollToBottom();
+    });
+
+    window.addEventListener('load', scrollToBottom);
+    scrollToBottom();
+    input.focus();
+    autoGrow();
+})();
+</script>
+
+</body>
+</html>
