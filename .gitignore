@@ -3,3 +3,4 @@ lib/__pycache__/
 env.json
 .vscode
 database/
+TODO.md

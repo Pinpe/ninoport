@@ -2,25 +2,38 @@ from lib import database
 from lib import core
 from flask import *
 import random
+import sys
+import os
 
 
 ninoport: Flask     = Flask(__name__)
 database_data: dict = database.load_data()
 
 
+def get_input_instance_config() -> dict:
+    '''
+    获取POST发送而来的表单里的实例属性，可以用于对创建和修改实例提供信息。
+
+    :return: 用户在表单输入的实例属性，可以使用`get_input_instance_metadata()['xxx']`访问
+    '''
+    return {
+        'api-key':  request.form.get('api-key'),
+        'base-url':  request.form.get('base-url'),
+        'model':  request.form.get('model'),
+        'thinking':  True if request.form.get('thinking') == 'on' else False,
+        'reasoning-effort':  None if request.form.get('reasoning-effort') == ''
+            else request.form.get('reasoning-effort'),
+        'save-context':  True if request.form.get('save-context') == 'on' else False,
+        'system-prompt': None if request.form.get('system-prompt') == ''
+            else request.form.get('system-prompt')
+    }
+
+
 @ninoport.route('/')
 def public_main():
-    id_list = []
-    model_list = []
-
-    for index, data in database_data['instance'].items():
-        id_list.append(index)
-        model_list.append(data['model'])
-
     return render_template(
         'index.html',
-        id_list    = id_list,
-        model_list = model_list
+        database_data = database_data['instance']
     )
 
 
@@ -38,25 +51,9 @@ def delete_instance():
 
 @ninoport.route('/create-instance', methods=['POST'])
 def create_instance():
-    api_key = request.form.get('api-key')
-    base_url = request.form.get('base-url')
-    model = request.form.get('model')
-    thinking = True if request.form.get('thinking') == 'on' else False
-    reasoning_effort = None if request.form.get('reasoning-effort') == '' \
-        else request.form.get('reasoning-effort')
-    system_prompt = None if request.form.get('system-prompt') == '' \
-        else request.form.get('system-prompt')
-
     id_ = random.randint(10000, 99999)
 
-    database_data['instance'][str(id_)] = {
-        'api-key':          api_key,
-        'base-url':         base_url,
-        'model':            model,
-        'thinking':         thinking,
-        'reasoning-effort': reasoning_effort,
-        'system-prompt':    system_prompt
-    }
+    database_data['instance'][str(id_)] = get_input_instance_config()
     database_data['context'][str(id_)] = []
     database.overwrite_data(database_data['instance'], 'instance')
     database.overwrite_data(database_data['context'], 'context')
@@ -64,8 +61,18 @@ def create_instance():
     return redirect('/')
 
 
+@ninoport.route('/edit-instance', methods=['POST'])
+def edit_instance():
+    id_ = request.form.get('edit-id')
+
+    database_data['instance'][str(id_)] = get_input_instance_config()
+    database.overwrite_data(database_data['instance'], 'instance')
+
+    return redirect('/')
+
+
 @ninoport.route('/chat/<id_>')
-def public_chat(id_):
+def public_chat(id_: str):
     messages_list = []
 
     for i in database_data['context'][id_]:
@@ -84,11 +91,17 @@ def public_chat(id_):
 
 
 @ninoport.route('/chat/<id_>/send', methods=['POST'])
-def send(id_):
-    message_list = []
+def send(id_: str):
+    to_api_message_list = []
     user_input = request.form.get('user-input')
+    database_data['context'][id_].append(('user', user_input))
+
+    if database_data['instance'][id_]['save-context'] == False:
+        database_data['context'][id_] = [database_data['context'][id_][-1]]
+
     for i in database_data['context'][id_]:
-        message_list.append(tuple(i))
+        if i[0] != 'error':
+            to_api_message_list.append(tuple(i))
 
     try:
         assistant_output = core.get_api(
@@ -99,16 +112,22 @@ def send(id_):
             reasoning_effort = database_data['instance'][id_]['reasoning-effort'],
             messages         = core.create_message(
                 system  = database_data['instance'][id_]['system-prompt'],
-                history = message_list + [('user', user_input)]
+                history = to_api_message_list
         ))
-    except Exception as err:
-        assistant_output =  'AI错误：' + str(err)
+    except Exception as error_content:
+        database_data['context'][id_].append(('error', str(error_content)))
+    else:
+        database_data['context'][id_].append(('assistant', assistant_output))
 
-    database_data['context'][id_].append(['user', user_input])
-    database_data['context'][id_].append(['assistant', assistant_output])
     database.overwrite_data(database_data['context'], 'context')
 
     return redirect(f'/chat/{id_}')
+
+
+@ninoport.route('/reload')
+def reload():
+    os.execv(sys.executable, [sys.executable] + sys.argv)
+    return('/')
 
 
 if __name__ == '__main__':

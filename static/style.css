@@ -144,6 +144,21 @@ svg { display: block; }
     color: var(--text);
 }
 
+/* 站点标记：🪐 坐在一个浅色小方格里 */
+.brand-logo {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+    font-size: 1.02rem;
+    line-height: 1;
+}
+
 .brand-name {
     font-family: var(--font-serif);
     font-size: 1.22rem;
@@ -159,6 +174,18 @@ svg { display: block; }
     padding-left: 10px;
     margin-left: 2px;
     border-left: 1px solid var(--line-2);
+}
+
+.brand-version {
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: .68rem;
+    line-height: 1.5;
+    letter-spacing: .03em;
+    color: var(--text-3);
+    padding: 2px 9px;
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-pill);
 }
 
 .topbar-spacer { flex: 1; }
@@ -343,6 +370,14 @@ svg { display: block; }
 }
 
 .card-head .icon-btn { pointer-events: auto; }
+
+/* 卡片右上角那组按钮（编辑 / 删除） */
+.card-actions {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    flex: none;
+}
 
 .card-model {
     font-family: var(--font-serif);

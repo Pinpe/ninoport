@@ -2,7 +2,7 @@ import json
 import os
 
 
-def format_json_dump(content: str, file_path: str) -> None:
+def format_json_dump(content: dict, file_path: str) -> None:
     '''
     用于在json**覆写**时提供格式化和设定编码，替代原来的json_dump()。
 

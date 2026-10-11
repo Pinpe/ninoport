@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     {% set iid = request.view_args['id_'] %}
     <title>NinoPort · #{{ iid }}</title>
+    <!-- 图标＝🪐，由 Noto Color Emoji 渲成 PNG 放在 static/ 里 -->
+    <link rel="icon" type="image/png" sizes="32x32"
+          href="{{ url_for('static', filename='favicon-32.png') }}">
+    <link rel="icon" type="image/png" sizes="64x64"
+          href="{{ url_for('static', filename='favicon-64.png') }}">
+    <link rel="apple-touch-icon"
+          href="{{ url_for('static', filename='apple-touch-icon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <!-- AI 的回复按 markdown 渲染：marked 负责解析，DOMPurify 负责消毒 ——
          模型吐出来的原始 HTML 一律不许直接进 DOM。
@@ -25,7 +32,7 @@
         </a>
         <div class="chat-title">
             <span class="chat-id">#{{ iid }}</span>
-            <span class="chat-sub">NinoPort</span>
+            <span class="chat-sub">NinoPort · v1.1.0</span>
         </div>
     </header>
 
@@ -46,7 +53,7 @@
             {% for idx in range(message_type_list | length) %}
                 {% set role = message_type_list[idx] %}
                 {% set text = message_context_list[idx] %}
-                {% set is_err = role == 'assistant' and text.startswith('AI错误') %}
+                {% set is_err = role == 'error' %}
                 <div class="msg-row {{ 'msg-user' if role == 'user' else 'msg-ai' }}">
                     <div class="bubble{{ ' is-error' if is_err else '' }}">
                         <div class="bubble-role">{{ '你' if role == 'user' else ('错误' if is_err else 'AI') }}</div>

@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>NinoPort · 实例</title>
+    <!-- 图标＝🪐，由 Noto Color Emoji 渲成 PNG 放在 static/ 里 -->
+    <link rel="icon" type="image/png" sizes="32x32"
+          href="{{ url_for('static', filename='favicon-32.png') }}">
+    <link rel="icon" type="image/png" sizes="64x64"
+          href="{{ url_for('static', filename='favicon-64.png') }}">
+    <link rel="apple-touch-icon"
+          href="{{ url_for('static', filename='apple-touch-icon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -11,9 +18,11 @@
 <header class="topbar">
     <div class="topbar-inner">
         <a class="brand" href="/">
+            <span class="brand-logo" aria-hidden="true">🪐</span>
             <span class="brand-name">NinoPort</span>
             <span class="brand-tail">AI 端口</span>
         </a>
+        <span class="brand-version">v1.1.0</span>
         <div class="topbar-spacer"></div>
         <button type="button" class="btn btn-primary js-open-create">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -30,33 +39,44 @@
         <h1 class="page-title">你的实例</h1>
         <p class="page-desc">
             一个实例就是一套 <code>API Key</code> ＋ <code>模型</code> 的组合，点开就能直接对话。
-            目前有 {{ id_list | length }} 个。
+            目前有 {{ database_data | length }} 个。
         </p>
     </div>
 
-    {% if id_list %}
+    {% if database_data %}
         <div class="instance-grid">
-            {% for idx in range(id_list | length) %}
-                {% set iid = id_list[idx] %}
-                {% set imodel = model_list[idx] %}
+            {% for iid, meta in database_data.items() %}
+                {% set imodel = meta['model'] %}
                 <article class="instance-card">
                     <a class="card-link" href="/chat/{{ iid }}"
                        aria-label="进入实例 {{ iid }} 的对话"></a>
 
                     <div class="card-head">
                         <span class="card-model">{{ imodel }}</span>
-                        <button type="button" class="icon-btn danger js-delete"
-                                data-id="{{ iid }}" data-model="{{ imodel }}"
-                                title="删除实例 {{ iid }}" aria-label="删除实例 {{ iid }}">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                 stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
-                                 aria-hidden="true">
-                                <path d="M3 6h18"/>
-                                <path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6"/>
-                                <path d="M18.5 6l-.9 13.1A2 2 0 0 1 15.6 21H8.4a2 2 0 0 1-2-1.9L5.5 6"/>
-                                <path d="M10 11v6M14 11v6"/>
-                            </svg>
-                        </button>
+                        <div class="card-actions">
+                            <button type="button" class="icon-btn js-edit"
+                                    data-id="{{ iid }}" data-meta='{{ meta | tojson }}'
+                                    title="编辑实例 {{ iid }}" aria-label="编辑实例 {{ iid }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
+                                     aria-hidden="true">
+                                    <path d="M12 20h9"/>
+                                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                                </svg>
+                            </button>
+                            <button type="button" class="icon-btn danger js-delete"
+                                    data-id="{{ iid }}" data-model="{{ imodel }}"
+                                    title="删除实例 {{ iid }}" aria-label="删除实例 {{ iid }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
+                                     aria-hidden="true">
+                                    <path d="M3 6h18"/>
+                                    <path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6"/>
+                                    <path d="M18.5 6l-.9 13.1A2 2 0 0 1 15.6 21H8.4a2 2 0 0 1-2-1.9L5.5 6"/>
+                                    <path d="M10 11v6M14 11v6"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     <p class="card-id">#{{ iid }}</p>
@@ -94,10 +114,12 @@
 <div class="modal-mask" id="create-modal">
     <form class="modal-panel modal-lg" id="create-form" action="/create-instance" method="post"
           role="dialog" aria-modal="true" aria-labelledby="create-title">
+        <input type="hidden" name="edit-id" id="edit-id-input">
+
         <div class="modal-head">
             <div class="modal-head-text">
                 <h2 class="modal-title" id="create-title">创建实例</h2>
-                <p class="modal-sub">左边怎么填，右边就是它将来实际发出去的请求</p>
+                <p class="modal-sub" id="modal-sub">左边怎么填，右边就是它将来实际发出去的请求</p>
             </div>
             <button type="button" class="icon-btn modal-close js-close" aria-label="关闭">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
@@ -149,6 +171,16 @@
                     </div>
 
                     <div class="field">
+                        <label class="switch-row" for="save-context">
+                            <input type="checkbox" id="save-context" name="save-context" checked>
+                            <span class="switch-text">
+                                <span class="switch-title">保存上下文</span>
+                                <span class="switch-desc">每轮把历史消息一起发出去；关掉就只发当前这一条。</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="field">
                         <label class="field-label" for="reasoning-effort">
                             思考强度 <span class="field-tag">reasoning-effort</span>
                         </label>
@@ -195,7 +227,8 @@
 
                     <p class="code-note">
                         这就是这个实例将来实际发出的请求。每次对话时，
-                        历史消息会一起塞进 <code>messages</code> 再发出去；
+                        历史消息会一起塞进 <code>messages</code> 再发出去
+                        （关了「保存上下文」就只发当前这一条）；
                         上面 Key 的位置为了安全没有显示真实值。
                     </p>
                 </div>
@@ -204,10 +237,10 @@
         </div>
 
         <div class="modal-foot">
-            <span class="modal-foot-note">创建后会得到一个随机编号，用编号进入对话。</span>
+            <span class="modal-foot-note" id="modal-foot-note">创建后会得到一个随机编号，用编号进入对话。</span>
             <span class="spacer"></span>
             <button type="button" class="btn btn-ghost js-close">取消</button>
-            <button type="submit" class="btn btn-primary">创建实例</button>
+            <button type="submit" class="btn btn-primary" id="submit-btn">创建实例</button>
         </div>
     </form>
 </div>
@@ -288,14 +321,6 @@
         if (e.key === 'Escape') { closeAll(); }
     });
 
-    document.querySelectorAll('.js-open-create').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            openModal(createModal, document.getElementById('api-key'));
-            renderCode();
-            growSystemBox();
-        });
-    });
-
     /* ── 删除确认 ─────────────────────────────────────────────────────── */
     document.querySelectorAll('.js-delete').forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -316,7 +341,72 @@
     var thinkInput  = $('thinking');
     var effortInput = $('reasoning-effort');
     var systemInput = $('system-prompt');
+    var saveCtxInput = $('save-context');
     var codeOut     = $('code-out');
+
+    /* ── 创建 / 编辑：同一个弹窗，两副面孔 ─────────────────────────────── */
+    var formTitle   = $('create-title');
+    var formSub     = $('modal-sub');
+    var formNote    = $('modal-foot-note');
+    var submitBtn   = $('submit-btn');
+    var editIdInput = $('edit-id-input');
+
+    /* 新建时先摆一份空配置，其中「保存上下文」默认开着 */
+    var NEW_DEFAULTS = { 'save-context': true };
+
+    var MODE_TEXT = {
+        create: {
+            title:  '创建实例',
+            sub:    '左边怎么填，右边就是它将来实际发出去的请求',
+            note:   '创建后会得到一个随机编号，用编号进入对话。',
+            btn:    '创建实例',
+            action: '/create-instance'
+        },
+        edit: {
+            title:  '编辑实例',
+            sub:    '改完就是它下次对话用的配置，编号不会变',
+            note:   '编号和历史消息都留着，只换这套配置。',
+            btn:    '保存修改',
+            action: '/edit-instance'
+        }
+    };
+
+    /* 按一份配置把表单摆好；两副面孔都走这里，省得字段对不上 */
+    function openForm(mode, meta, id, focusEl) {
+        var t = MODE_TEXT[mode];
+        formTitle.textContent = t.title;
+        formSub.textContent   = t.sub;
+        formNote.textContent  = t.note;
+        submitBtn.textContent = t.btn;
+        createForm.action     = t.action;
+        editIdInput.value     = id || '';
+
+        keyInput.value       = meta['api-key'] || '';
+        baseInput.value      = meta['base-url'] || '';
+        modelInput.value     = meta['model'] || '';
+        thinkInput.checked   = meta['thinking'] === true;
+        effortInput.value    = meta['reasoning-effort'] || '';
+        systemInput.value    = meta['system-prompt'] || '';
+        saveCtxInput.checked = meta['save-context'] === true;
+
+        openModal(createModal, focusEl);
+        renderCode();
+        growSystemBox();
+    }
+
+    document.querySelectorAll('.js-open-create').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            openForm('create', NEW_DEFAULTS, '', keyInput);
+        });
+    });
+
+    document.querySelectorAll('.js-edit').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var meta = {};
+            try { meta = JSON.parse(btn.dataset.meta || '{}'); } catch (err) { meta = {}; }
+            openForm('edit', meta, btn.dataset.id, modelInput);
+        });
+    });
 
     var ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
@@ -355,6 +445,7 @@
         var think  = thinkInput.checked;
         var effort = effortInput.value;
         var system = systemInput.value.trim();
+        var saveCtx = saveCtxInput.checked;
 
         var lines = [];
 
@@ -377,6 +468,10 @@
 
         /* messages */
         var msgs = [];
+        if (!saveCtx) {
+            /* 关掉保存上下文：每条只发自己，历史不进 messages */
+            msgs.push('        ' + com('# 没开「保存上下文」：历史不带，每条都是新的'));
+        }
         if (system) {
             msgs.push('        {' + ky('"role"') + ': ' + str('"system"') + ', '
                       + ky('"content"') + ': ' + pyStr(truncate(system, 60)) + '},');
