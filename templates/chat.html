@@ -52,11 +52,10 @@
 
             {% for idx in range(message_type_list | length) %}
                 {% set role = message_type_list[idx] %}
-                {% set text = message_context_list[idx] %}
+                {% set text = message_content_list[idx] %}
                 {% set is_err = role == 'error' %}
                 <div class="msg-row {{ 'msg-user' if role == 'user' else 'msg-ai' }}">
                     <div class="bubble{{ ' is-error' if is_err else '' }}">
-                        <div class="bubble-role">{{ '你' if role == 'user' else ('错误' if is_err else 'AI') }}</div>
                         {# 只有正常的 AI 回复走 markdown；你说的、报错的都保持原样 #}
                         <div class="bubble-text{{ ' js-md' if role == 'assistant' and not is_err else '' }}">{{ text }}</div>
                     </div>
@@ -135,22 +134,17 @@
     }
 
     /* ── 你来我往的气泡 ──────────────────────────────────────────────── */
-    function bubble(role, label, text, extraClass) {
+    function bubble(role, text, extraClass) {
         var row = document.createElement('div');
         row.className = 'msg-row ' + role;
 
         var b = document.createElement('div');
         b.className = 'bubble' + (extraClass ? ' ' + extraClass : '');
 
-        var r = document.createElement('div');
-        r.className = 'bubble-role';
-        r.textContent = label;
-
         var t = document.createElement('div');
         t.className = 'bubble-text';
         t.textContent = text;   /* 用 textContent，不解析 HTML */
 
-        b.appendChild(r);
         b.appendChild(t);
         row.appendChild(b);
         return row;
@@ -164,10 +158,6 @@
         var b = document.createElement('div');
         b.className = 'bubble is-waiting';
 
-        var r = document.createElement('div');
-        r.className = 'bubble-role';
-        r.textContent = 'AI';
-
         var wrap = document.createElement('div');
         wrap.className = 'bubble-text waiting-line';   /* 间距在 CSS 里管 */
 
@@ -180,7 +170,6 @@
 
         wrap.appendChild(label);
         wrap.appendChild(dots);
-        b.appendChild(r);
         b.appendChild(wrap);
         row.appendChild(b);
         return row;
@@ -199,7 +188,7 @@
         var empty = document.getElementById('chat-empty');
         if (empty) { empty.remove(); }
 
-        list.appendChild(bubble('msg-user', '你', text));
+        list.appendChild(bubble('msg-user', text));
         list.appendChild(waitingBubble());
         scrollToBottom();
 

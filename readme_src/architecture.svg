@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1210"
+     viewBox="0 0 1500 1210">
+  <defs>
+    <marker id="tip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+            markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#D6D1C2"/>
+    </marker>
+  </defs>
+  <rect width="1500" height="1210" fill="#F0EEE6"/>
+  <text x="60" y="40" font-family="Noto Serif CJK SC" font-size="26"
+        fill="#9C978C">NinoPort · 架构</text>
+<rect x="60" y="60" width="1380" height="150" rx="18" fill="#F5F3EC" stroke="#E5E1D6" stroke-width="2"/>
+<text x="94" y="108" font-family="Noto Serif CJK SC" font-size="27" fill="#1F1E1D">浏览器</text>
+<text x="94" y="148" font-family="Noto Sans CJK SC" font-size="22" fill="#6B6862">index.html 实例列表（创建 / 编辑 / 删除）　　chat.html 对话页</text>
+<line x1="750" y1="210" x2="750" y2="268" stroke="#D6D1C2" stroke-width="2.6" marker-end="url(#tip)"/>
+<text x="766.0" y="247.0" font-family="Noto Sans CJK SC" font-size="19" fill="#9C978C">HTTP 表单</text>
+<rect x="60" y="268" width="1380" height="200" rx="18" fill="#FBFAF7" stroke="#E5E1D6" stroke-width="2"/>
+<text x="94" y="316" font-family="Noto Serif CJK SC" font-size="27" fill="#1F1E1D">main.py · Flask 路由</text>
+<text x="94" y="356" font-family="Noto Sans CJK SC" font-size="22" fill="#6B6862">拿到表单就拼实例属性、存盘、跳回页面；不碰任何 API 细节</text>
+<text x="94" y="388" font-family="Noto Sans Mono" font-size="19" fill="#B65636">/   /create-instance   /edit-instance   /delete-instance</text>
+<text x="94" y="420" font-family="Noto Sans Mono" font-size="19" fill="#B65636">/chat/&lt;id&gt;   /chat/&lt;id&gt;/send   /delete-context   /reload</text>
+<line x1="1225" y1="468" x2="1225" y2="526" stroke="#D6D1C2" stroke-width="2.6" marker-end="url(#tip)"/>
+<text x="1241.0" y="505.0" font-family="Noto Sans CJK SC" font-size="19" fill="#9C978C">load / overwrite</text>
+<rect x="1010" y="526" width="430" height="190" rx="18" fill="#F7EAE3" stroke="#D97757" stroke-width="2"/>
+<text x="1044" y="574" font-family="Noto Serif CJK SC" font-size="27" fill="#D97757">lib/database.py</text>
+<text x="1044" y="614" font-family="Noto Sans CJK SC" font-size="22" fill="#6B6862">全程序唯一碰硬盘的地方</text>
+<text x="1044" y="646" font-family="Noto Sans CJK SC" font-size="22" fill="#6B6862">instance.json 与</text>
+<text x="1044" y="678" font-family="Noto Sans CJK SC" font-size="22" fill="#6B6862">context.json 各存一个库</text>
+<line x1="510" y1="468" x2="510" y2="526" stroke="#D6D1C2" stroke-width="2.6" marker-end="url(#tip)"/>
+<text x="526.0" y="505.0" font-family="Noto Sans CJK SC" font-size="19" fill="#9C978C">get_api()</text>
+<rect x="60" y="526" width="900" height="190" rx="18" fill="#FBFAF7" stroke="#E5E1D6" stroke-width="2"/>
+<text x="94" y="574" font-family="Noto Serif CJK SC" font-size="27" fill="#1F1E1D">lib/core.py</text>
+<text x="94" y="614" font-family="Noto Sans CJK SC" font-size="22" fill="#6B6862">与 AI 交互的直接接口</text>
+<text x="94" y="646" font-family="Noto Sans CJK SC" font-size="22" fill="#6B6862">get_api() 按 api-type 分派到对应协议，</text>
+<text x="94" y="678" font-family="Noto Sans CJK SC" font-size="22" fill="#6B6862">create_message() 把 system 与历史拼成 OpenAI 格式</text>
+<line x1="510" y1="716" x2="510" y2="780" stroke="#D6D1C2" stroke-width="2.6" marker-end="url(#tip)"/>
+<text x="526.0" y="756.0" font-family="Noto Sans CJK SC" font-size="19" fill="#9C978C">按协议分派</text>
+<rect x="60" y="780" width="900" height="190" rx="18" fill="#FBFAF7" stroke="#E5E1D6" stroke-width="2"/>
+<text x="94" y="828" font-family="Noto Serif CJK SC" font-size="27" fill="#1F1E1D">lib/base_api.py</text>
+<text x="94" y="868" font-family="Noto Sans CJK SC" font-size="22" fill="#6B6862">每一种 API 协议一个函数，返回的都是 AI 输出</text>
+<text x="94" y="900" font-family="Noto Sans Mono" font-size="19" fill="#B65636">chat_completions()   responses_api()</text>
+<text x="94" y="932" font-family="Noto Sans CJK SC" font-size="22" fill="#6B6862">除了 get_api() 以外，不许直接调用这里的函数</text>
+<line x1="510" y1="970" x2="510" y2="1030" stroke="#D6D1C2" stroke-width="2.6" marker-end="url(#tip)"/>
+<text x="526.0" y="1008.0" font-family="Noto Sans CJK SC" font-size="19" fill="#9C978C">OpenAI 兼容 API</text>
+<rect x="60" y="1030" width="900" height="120" rx="18" fill="#F7EAE3" stroke="#D97757" stroke-width="2"/>
+<text x="94" y="1078" font-family="Noto Serif CJK SC" font-size="27" fill="#D97757">中转站 / 官方 / 本地服务</text>
+<text x="94" y="1118" font-family="Noto Sans CJK SC" font-size="22" fill="#6B6862">实例上写死 base_url，换一家就是换一个字符串</text>
+</svg>

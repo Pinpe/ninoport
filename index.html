@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NinoPort 🪐 · AI 端口</title>
+    <meta name="description"
+          content="NinoPort 是一个跑在自己电脑上的小面板，一个实例就是一套 API Key 加一个模型，点开就能聊。">
+
+    <!-- 图标＝🪐，由 Noto Color Emoji 渲成 PNG 放在 static/ 里 -->
+    <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="static/favicon-64.png">
+    <link rel="apple-touch-icon" href="static/apple-touch-icon.png">
+
+    <!-- 跟程序前端共用同一张样式表：配色、字体、按钮、代码块全从它来，
+         下面那段 <style> 只补官网自己的几块（首屏、功能卡、分成小节） -->
+    <link rel="stylesheet" href="static/style.css">
+
+    <style>
+        /* ── 官网专用 ──────────────────────────────────────────────────────── */
+        a.btn { text-decoration: none; }
+
+        .site-hero {
+            text-align: center;
+            padding: 76px 0 60px;
+        }
+
+        .site-hero .page-eyebrow { margin-bottom: 18px; }
+
+        .site-hero h1 {
+            font-size: clamp(1.85rem, 4.2vw, 2.9rem);
+            margin: 0 auto 18px;
+            max-width: 17em;
+        }
+
+        .site-hero .hero-desc {
+            margin: 0 auto;
+            max-width: 40em;
+            color: var(--text-2);
+            font-size: 1rem;
+        }
+
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        /* 一节一节往下走 */
+        .sec { margin-top: 78px; }
+
+        .sec > h2 {
+            font-size: 1.45rem;
+            margin-bottom: 10px;
+        }
+
+        .sec-lead {
+            margin: 0 0 26px;
+            max-width: 44em;
+            color: var(--text-2);
+        }
+
+        /* 功能卡：跟实例卡一个血统——浅底、细描边、几乎不用阴影 */
+        .feat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(252px, 1fr));
+            gap: 16px;
+        }
+
+        .feat-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--r-lg);
+            padding: 22px 22px 20px;
+        }
+
+        .feat-card h3 {
+            font-size: 1.02rem;
+            margin-bottom: 8px;
+        }
+
+        .feat-card p {
+            margin: 0;
+            color: var(--text-2);
+            font-size: .9rem;
+            line-height: 1.68;
+        }
+
+        .feat-card code {
+            font-family: var(--font-mono);
+            font-size: .84em;
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+            border-radius: 5px;
+            padding: 1px 5px;
+            color: var(--text);
+        }
+
+        .shot {
+            display: block;
+            width: 100%;
+            height: auto;
+            border: 1px solid var(--line);
+            border-radius: var(--r-lg);
+            background: var(--surface-2);
+        }
+
+        .layers {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            max-width: 46em;
+        }
+
+        .layers li {
+            position: relative;
+            padding: 0 0 0 26px;
+            margin-bottom: 12px;
+            color: var(--text-2);
+        }
+
+        .layers li::before {
+            content: "";
+            position: absolute;
+            left: 4px;
+            top: .72em;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--clay);
+            opacity: .75;
+        }
+
+        .layers b {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        /* 命令块：借程序的 .code-panel，只把留白调松一点 */
+        .cmd { margin-bottom: 14px; }
+
+        .site-foot {
+            margin-top: 84px;
+            padding-top: 26px;
+            border-top: 1px solid var(--line);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 22px;
+            align-items: center;
+            color: var(--text-3);
+            font-size: .84rem;
+        }
+
+        .site-foot a { color: var(--text-2); }
+        .site-foot .spacer { flex: 1; }
+
+        @media (max-width: 640px) {
+            .site-hero { padding: 48px 0 40px; }
+            .sec { margin-top: 56px; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <div class="topbar-inner">
+        <a class="brand" href="./">
+            <span class="brand-logo" aria-hidden="true">🪐</span>
+            <span class="brand-name">NinoPort</span>
+            <span class="brand-tail">AI 端口</span>
+        </a>
+        <span class="brand-version">v1.1.0</span>
+        <div class="topbar-spacer"></div>
+        <a class="btn btn-ghost" href="https://github.com/Pinpe/ninoport">
+            在 GitHub 上看
+        </a>
+    </div>
+</header>
+
+<main class="page">
+
+    <!-- ── 首屏 ──────────────────────────────────────────────────────────── -->
+    <section class="site-hero">
+        <span class="page-eyebrow">Self-hosted</span>
+        <h1>一个实例，就是一个对话入口</h1>
+        <p class="hero-desc">
+            一套 API Key ＋ 一个模型名，填进 NinoPort 就得到一串编号，点开直接聊。
+            协议、思考强度、系统提示词、要不要带历史，全都收在那张卡片里；
+            配置和聊天记录只躺在你自己电脑上的几个 JSON 文件里。
+        </p>
+        <div class="hero-actions">
+            <a class="btn btn-primary" href="https://github.com/Pinpe/ninoport">
+                看源码
+            </a>
+            <a class="btn btn-ghost" href="#start">快速开始</a>
+        </div>
+    </section>
+
+    <!-- ── 功能 ──────────────────────────────────────────────────────────── -->
+    <section class="sec">
+        <h2>它能替你记着的事</h2>
+        <p class="sec-lead">
+            那些每次开新对话都要重抄一遍的东西——哪家中转站、哪个模型、参数怎么填——全归实例管。
+        </p>
+
+        <div class="feat-grid">
+            <div class="feat-card">
+                <h3>多协议</h3>
+                <p>实例上直接选 <code>Chat Completions</code> 还是
+                   <code>Responses</code>，两边写法不一样的部分在 <code>lib/base_api.py</code>
+                   里消化掉了。</p>
+            </div>
+            <div class="feat-card">
+                <h3>思考开关与强度</h3>
+                <p><code>thinking</code> 和 <code>reasoning_effort</code> 是两个独立参数，
+                   因为不同协议的表达方式不一样。强度只列官方认的那几个值。</p>
+            </div>
+            <div class="feat-card">
+                <h3>等效代码</h3>
+                <p>填表的时候右边实时生成这个实例将来真正发出的那段 OpenAI 调用。
+                   填错了当场能看见，想抄走也随手。</p>
+            </div>
+            <div class="feat-card">
+                <h3>系统提示词</h3>
+                <p>留空就完全不发 system 消息，不塞空字符串。Responses 走的话，
+                   它会单独变成 <code>instructions</code>。</p>
+            </div>
+            <div class="feat-card">
+                <h3>保存上下文</h3>
+                <p>关掉之后每轮只发当前这一条。记录照样留着，只是不进请求——
+                   想拿同一个实例试不同的开场，不用来回清库。</p>
+            </div>
+            <div class="feat-card">
+                <h3>对话页</h3>
+                <p>AI 的回复按 markdown 渲染（marked 解析、DOMPurify 消毒）。
+                   报错的那条单独标出来，原样显示不渲染。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 架构 ──────────────────────────────────────────────────────────── -->
+    <section class="sec">
+        <h2>三层，加上一格破例的</h2>
+        <p class="sec-lead">
+            边界划得比较死：谁收表单、谁跟模型说话、谁碰硬盘，各管各的。
+        </p>
+
+        <img class="shot" src="readme_src/architecture.png"
+             alt="NinoPort 架构图：浏览器 → main.py 路由 → lib/core.py → lib/base_api.py → 外部 API；lib/database.py 单独管磁盘">
+
+        <ul class="layers" style="margin-top:26px">
+            <li><b>main.py</b> 只管 Flask 那点事：收表单、拼配置、存盘、跳页面，不碰任何 API 细节。</li>
+            <li><b>lib/core.py</b> 是与 AI 交互的直接接口：按 <code>api-type</code> 分派协议，
+                再把系统提示词和历史拼成 OpenAI 标准格式。</li>
+            <li><b>lib/base_api.py</b> 每种协议一个函数，返回的都是 AI 输出。外面只许从
+                <code>get_api()</code> 进来。</li>
+            <li><b>lib/database.py</b> 是全程序唯一碰硬盘的地方，所以单独放着。</li>
+        </ul>
+    </section>
+
+    <!-- ── 快速开始 ──────────────────────────────────────────────────────── -->
+    <section class="sec" id="start">
+        <h2>跑起来</h2>
+        <p class="sec-lead">
+            需要 Python 3.11 或更高版本（用到了 <code>typing.Unpack</code>）。
+        </p>
+
+        <pre class="code-panel cmd">git clone https://github.com/Pinpe/ninoport.git
+cd ninoport
+pip install -r requirements.txt
+python main.py</pre>
+
+        <p class="sec-lead">
+            然后打开 <code>http://127.0.0.1:5000</code>，点「创建实例」。
+            API Key 只写进本机的 <code>database/instance.json</code>，不上传也不加密——
+            记得别把它挂到公网上，也别把 <code>database/</code> 提交上去。
+        </p>
+    </section>
+
+    <footer class="site-foot">
+        <span>GPL-3.0</span>
+        <a href="https://github.com/Pinpe/nino-ai-chat">Nino</a>
+        <a href="https://github.com/Pinpe/ninoclaw">NinoClaw</a>
+        <span class="spacer"></span>
+        <span>🪐 NinoPort</span>
+    </footer>
+
+</main>
+
+</body>
+</html>

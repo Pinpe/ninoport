@@ -371,7 +371,7 @@ svg { display: block; }
 
 .card-head .icon-btn { pointer-events: auto; }
 
-/* 卡片右上角那组按钮（编辑 / 删除） */
+/* 卡片右上角那组按钮（编辑 / 清空记录 / 删除） */
 .card-actions {
     display: flex;
     align-items: center;
@@ -870,15 +870,6 @@ svg { display: block; }
     overflow-wrap: anywhere;
 }
 
-.bubble-role {
-    font-family: var(--font-mono);
-    font-size: .68rem;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    opacity: .55;
-    margin-bottom: 4px;
-}
-
 .bubble-text { white-space: pre-wrap; }
 
 /* 用户：陶土色实心，右下角收一点 */
@@ -901,7 +892,6 @@ svg { display: block; }
     background: var(--danger-soft);
     border-color: var(--danger-line);
 }
-.msg-ai .bubble.is-error .bubble-role { color: var(--danger); opacity: .8; }
 
 /* 等待回复 */
 .msg-ai .bubble.is-waiting {

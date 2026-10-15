@@ -1,18 +1,26 @@
-from openai import OpenAI
-from openai import NOT_GIVEN
+from typing import TypedDict, Unpack
+from lib import base_api
+
+
+class api_params_type(TypedDict):
+    ''' `get_api()`的`**params`的类型标注 '''
+    api_key: str
+    base_url: str
+    model: str
+    thinking: bool
+    reasoning_effort: str | None
 
 
 def get_api(
-        api_key: str,
-        base_url: str,
-        model: str,
-        thinking: bool,
-        reasoning_effort: str | None,
-        messages: list[dict]
+        api_type: str,
+        messages: list[dict],
+        **params: Unpack[api_params_type]
     ) -> str:
     '''
     直接将**原始**的提示词和上下文发送给AI，是与AI交互的直接接口。
 
+    :param api_type: 此请求使用何种API协议，可选的值有：
+        `chat`（Chat Completions）、`responses`（OpenAI Responses API）
     :param api_key: 由服务商提供的API Key，一般需要保密
     :param base_url: 由服务商提供的API端点
     :param model: 请求的模型名称
@@ -24,22 +32,18 @@ def get_api(
 
     :return: 从API端发送的AI输出
     '''
-    client = OpenAI(
-        api_key  = api_key,
-        base_url = base_url
-    )
-    response = client.chat.completions.create(
-        model            = model,
-        stream           = False,
-        extra_body       = {
-            'thinking': {'type': 'enabled'}
-            if thinking is True else {'type': 'disabled'}
-        },
-        reasoning_effort = reasoning_effort 
-            if reasoning_effort is not None else NOT_GIVEN,
-        messages         = messages
-    )
-    return response.choices[0].message.content
+    if api_type == 'chat':
+        return base_api.chat_completions(messages = messages, **params)
+
+    elif api_type == 'responses':
+        system = None
+        if messages[0]['role'] == 'system':
+            system = messages[0]['content']
+            del messages[0]
+        return base_api.responses_api(system = system, messages = messages, **params)
+
+    else:
+        raise TypeError(f'API type unknown: {api_type}')
 
 
 def create_message(
