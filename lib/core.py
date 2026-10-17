@@ -7,6 +7,7 @@ class api_params_type(TypedDict):
     api_key: str
     base_url: str
     model: str
+    max_tokens: int
     thinking: bool
     reasoning_effort: str | None
 
@@ -24,6 +25,7 @@ def get_api(
     :param api_key: 由服务商提供的API Key，一般需要保密
     :param base_url: 由服务商提供的API端点
     :param model: 请求的模型名称
+    :param max_tokens: 模型输出的最大token数，超过此数会被截断
     :param thinking: 是否启用思考
     :param reasoning_effort: 模型的思考强度，当设置为None时忽略，其他字符串则原样提供给API
     :param messages: 向AI提供的所有提示词和上下文
@@ -35,12 +37,15 @@ def get_api(
     if api_type == 'chat':
         return base_api.chat_completions(messages = messages, **params)
 
-    elif api_type == 'responses':
+    elif api_type == 'responses' or api_type == 'anthropic':
         system = None
         if messages[0]['role'] == 'system':
             system = messages[0]['content']
             del messages[0]
-        return base_api.responses_api(system = system, messages = messages, **params)
+        if api_type == 'responses':
+            return base_api.responses_api(system=system, messages=messages, **params)
+        else:
+            return base_api.anthropic_messages_api(system=system, messages=messages, **params)
 
     else:
         raise TypeError(f'API type unknown: {api_type}')

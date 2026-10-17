@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    {% set iid = request.view_args['id_'] %}
+    {% set iid = request.view_args['instance_id'] %}
     <title>NinoPort · #{{ iid }}</title>
     <!-- 图标＝🪐，由 Noto Color Emoji 渲成 PNG 放在 static/ 里 -->
     <link rel="icon" type="image/png" sizes="32x32"
@@ -32,7 +32,6 @@
         </a>
         <div class="chat-title">
             <span class="chat-id">#{{ iid }}</span>
-            <span class="chat-sub">NinoPort · v1.1.0</span>
         </div>
     </header>
 
@@ -58,6 +57,19 @@
                     <div class="bubble{{ ' is-error' if is_err else '' }}">
                         {# 只有正常的 AI 回复走 markdown；你说的、报错的都保持原样 #}
                         <div class="bubble-text{{ ' js-md' if role == 'assistant' and not is_err else '' }}">{{ text }}</div>
+                        {# 复制的是渲染前的 markdown 原文，不是屏幕上那排好看的 #}
+                        {% if role == 'assistant' and not is_err %}
+                            <button type="button" class="msg-copy"
+                                    title="复制这条的 Markdown 原文"
+                                    aria-label="复制这条的 Markdown 原文">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <rect x="8" y="8" width="13" height="13" rx="2.5"/>
+                                    <path d="M16 5.5A2.5 2.5 0 0 0 13.5 3h-8A2.5 2.5 0 0 0 3 5.5v8A2.5 2.5 0 0 0 5.5 16"/>
+                                </svg>
+                                <span class="msg-copy-text">复制</span>
+                            </button>
+                        {% endif %}
                     </div>
                 </div>
             {% endfor %}
@@ -66,7 +78,7 @@
     </main>
 
     <form class="composer" id="chat-form" method="post"
-          action="{{ url_for('send', id_=iid) }}">
+          action="{{ url_for('send', instance_id=iid) }}">
         <div class="composer-inner">
             <textarea class="composer-input" id="chat-input" name="user-input" rows="1"
                       placeholder="给这个实例发一条消息…" autocomplete="off"
@@ -123,6 +135,7 @@
     function renderMd(el) {
         if (el.dataset.mdDone === '1') { return; }
         el.dataset.mdDone = '1';
+        el.dataset.raw = el.textContent;   /* 先留一份原文：渲染完 textContent 就变样了 */
         if (!mdOk()) { return; }                   /* CDN 没拉到：保持纯文本，不折腾 */
         el.innerHTML = DOMPurify.sanitize(marked.parse(el.textContent));
         el.classList.add('md');
@@ -132,6 +145,37 @@
         var list = (root || document).querySelectorAll('.bubble-text.js-md');
         for (var i = 0; i < list.length; i++) { renderMd(list[i]); }
     }
+
+    /* ── 复制这一条：要的是渲染前的 markdown 原文 ────────────────────── */
+    function copyRaw(text, btn) {
+        var label = btn.querySelector('.msg-copy-text');
+        var done = function () {
+            btn.classList.add('is-done');
+            if (label) { label.textContent = '已复制'; }
+            setTimeout(function () {
+                btn.classList.remove('is-done');
+                if (label) { label.textContent = '复制'; }
+            }, 1600);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () {});
+            return;
+        }
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); } catch (err) {}
+        document.body.removeChild(ta);
+    }
+
+    list.addEventListener('click', function (e) {
+        var btn = e.target.closest ? e.target.closest('.msg-copy') : null;
+        if (!btn) { return; }
+        var textEl = btn.parentNode.querySelector('.bubble-text');
+        if (!textEl) { return; }
+        copyRaw(textEl.dataset.raw != null ? textEl.dataset.raw : textEl.textContent, btn);
+    });
 
     /* ── 你来我往的气泡 ──────────────────────────────────────────────── */
     function bubble(role, text, extraClass) {

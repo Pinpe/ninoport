@@ -1,4 +1,4 @@
-![](readme_src/logo.png)
+![](readme-src/logo.png)
 
 # NinoPort 🪐
 
@@ -14,17 +14,19 @@ NinoPort 是一个跑在自己电脑上的小面板，用来管那些散在各�
 
 ## ✨ 它做了什么
 
-- **多协议**：一个实例可以选择走 `Chat Completions` 还是 `OpenAI Responses API`，两边的差异在 `lib/base_api.py` 里消化掉了，上层不用管
+- **多协议**：一个实例可以选择走 `Chat Completions`、`OpenAI Responses API` 还是 `Anthropic Messages API`，各家的差异在 `lib/base_api.py` 里消化掉了，上层不用管
 - **思考开关与思考强度**：`thinking` 与 `reasoning_effort` 分开做成了两个参数，因为不同协议的表达方式不一样
-- **等效代码**：创建 / 编辑实例时，右边会实时生成这个实例将来实际发出的那段 OpenAI 调用代码。填错了能当场看出来，想抄走也随手
+- **最大输出 token**：每套实例单独设，按服务和模型自己的上限填
+- **等效代码**：创建 / 编辑实例时，右边会实时生成这个实例将来实际发出的调用代码（跟着所选协议走）。填错了能当场看出来，想抄走也随手
 - **系统提示词**：留空就完全不发 system 消息，不塞空字符串
-- **保存上下文**：关掉之后每轮只发当前这一条，历史照样记着、只是不进请求
-- **对话页**：AI 的回复按 markdown 渲染（marked 解析 + DOMPurify 消毒），报错的那条会单独标出来，原样显示不渲染
+- **保存上下文**：关掉之后每轮只带当前这一条进去，旧的上下文也不再留着，对话页上只剩这一问一答（想留底就先导出）
+- **对话页**：AI 的回复按 markdown 渲染（marked 解析 + DOMPurify 消毒），报错的那条会单独标出来，原样显示不渲染；每条回复可以一键复制它的 Markdown 原文
+- **导出与导入**：上下文能导出成 JSON，也能拿回来导入，导入时会先校验文件里是不是一个合格的数组
 - **清空上下文**：实例留着，聊过的都清掉
 
 ## 🗺️ 架构
 
-![](readme_src/architecture.png)
+![](readme-src/architecture.png)
 
 一共三层，边界划得比较死：
 
@@ -49,10 +51,11 @@ python main.py
 
 要填的东西：
 
-- **API 协议**：一般选 Chat Completions；走官方新接口的选 Responses
+- **API 协议**：一般选 Chat Completions；走官方新接口的选 Responses；连 Claude 的选 Anthropic Messages
 - **API Key**：只存在你本机的 `database/instance.json` 里
-- **API 端点**：中转站或者本地服务都填这儿；留空则走 OpenAI 官方端点
+- **API 端点**：中转站或者本地服务都填这儿；留空则走各家官方端点
 - **模型名称**：原样交给 API，拿不准就去服务商文档里抄一份
+- **最大输出 token**：按服务商的模型上限填，必填
 
 ## 📁 目录
 
@@ -66,13 +69,13 @@ ninoport/
 ├─ templates/           index.html 实例列表 / chat.html 对话页
 ├─ static/              样式表与图标
 ├─ database/            运行后生成：instance.json、context.json
-└─ readme_src/          README 用图的源码与生成脚本
+└─ readme-src/          README 用图的源码与生成脚本
 ```
 
-`readme_src/` 里那两张图不是画图软件导出的，是 `make_assets.py` 生成的，改配色或改文案直接改脚本再跑一遍：
+`readme-src/` 里那两张图不是画图软件导出的，是 `make-assets.py` 生成的，改配色或改文案直接改脚本再跑一遍：
 
 ```bash
-python3 readme_src/make_assets.py
+python3 readme-src/make-assets.py
 ```
 
 配色和字体跟 `static/style.css` 里的 `:root` 是同一套，别两处对不上。

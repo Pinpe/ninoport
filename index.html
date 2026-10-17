@@ -171,7 +171,7 @@
             <span class="brand-name">NinoPort</span>
             <span class="brand-tail">AI 端口</span>
         </a>
-        <span class="brand-version">v1.1.0</span>
+        <span class="brand-version">v1.3.0</span>
         <div class="topbar-spacer"></div>
         <a class="btn btn-ghost" href="https://github.com/Pinpe/ninoport">
             在 GitHub 上看
@@ -188,7 +188,7 @@
         <p class="hero-desc">
             一套 API Key ＋ 一个模型名，填进 NinoPort 就得到一串编号，点开直接聊。
             协议、思考强度、系统提示词、要不要带历史，全都收在那张卡片里；
-            配置和聊天记录只躺在你自己电脑上的几个 JSON 文件里。
+            配置和上下文只躺在你自己电脑上的几个 JSON 文件里。
         </p>
         <div class="hero-actions">
             <a class="btn btn-primary" href="https://github.com/Pinpe/ninoport">
@@ -208,9 +208,9 @@
         <div class="feat-grid">
             <div class="feat-card">
                 <h3>多协议</h3>
-                <p>实例上直接选 <code>Chat Completions</code> 还是
-                   <code>Responses</code>，两边写法不一样的部分在 <code>lib/base_api.py</code>
-                   里消化掉了。</p>
+                <p>实例上直接选 <code>Chat Completions</code>、<code>Responses</code>
+                   还是 <code>Anthropic Messages</code>，各家写法不一样的部分在
+                   <code>lib/base_api.py</code> 里消化掉了。</p>
             </div>
             <div class="feat-card">
                 <h3>思考开关与强度</h3>
@@ -219,23 +219,36 @@
             </div>
             <div class="feat-card">
                 <h3>等效代码</h3>
-                <p>填表的时候右边实时生成这个实例将来真正发出的那段 OpenAI 调用。
+                <p>填表的时候右边实时生成这个实例将来真正发出的那段调用，跟着所选协议走。
                    填错了当场能看见，想抄走也随手。</p>
             </div>
             <div class="feat-card">
                 <h3>系统提示词</h3>
                 <p>留空就完全不发 system 消息，不塞空字符串。Responses 走的话，
-                   它会单独变成 <code>instructions</code>。</p>
+                   它会单独变成 <code>instructions</code>；Anthropic 则是顶层的
+                   <code>system</code>。</p>
             </div>
             <div class="feat-card">
                 <h3>保存上下文</h3>
-                <p>关掉之后每轮只发当前这一条。记录照样留着，只是不进请求——
-                   想拿同一个实例试不同的开场，不用来回清库。</p>
+                <p>关掉之后每轮只发当前这一条，旧的上下文也不再留着，对话页上只剩这一问一答。
+                   想留底就先导出。</p>
+            </div>
+            <div class="feat-card">
+                <h3>最大输出 token</h3>
+                <p>每套实例单独设，按服务商的模型上限填。Chat Completions 和
+                   Anthropic 发 <code>max_tokens</code>，Responses 换成
+                   <code>max_output_tokens</code>。</p>
             </div>
             <div class="feat-card">
                 <h3>对话页</h3>
                 <p>AI 的回复按 markdown 渲染（marked 解析、DOMPurify 消毒）。
-                   报错的那条单独标出来，原样显示不渲染。</p>
+                   报错的那条单独标出来，原样显示不渲染；每条回复都能一键复制
+                   Markdown 原文。</p>
+            </div>
+            <div class="feat-card">
+                <h3>导出与导入</h3>
+                <p>上下文导出成 JSON，也能拿回来导入。导入前先校验文件里是不是
+                   一个合格的数组，不对就不让提交。</p>
             </div>
         </div>
     </section>
@@ -247,7 +260,7 @@
             边界划得比较死：谁收表单、谁跟模型说话、谁碰硬盘，各管各的。
         </p>
 
-        <img class="shot" src="readme_src/architecture.png"
+        <img class="shot" src="readme-src/architecture.png"
              alt="NinoPort 架构图：浏览器 → main.py 路由 → lib/core.py → lib/base_api.py → 外部 API；lib/database.py 单独管磁盘">
 
         <ul class="layers" style="margin-top:26px">
