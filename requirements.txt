@@ -2,4 +2,4 @@ flask
 openai
 anthropic
 requests
-webview
+pywebview

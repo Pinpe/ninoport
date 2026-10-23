@@ -37,6 +37,7 @@ jobs:
           --name NinoPort
           --add-data "templates;templates"
           --add-data "static;static"
+          --collect-all webview
           --hidden-import webview.platforms.edgechromium
           --hidden-import webview.platforms.winforms
           main.py
