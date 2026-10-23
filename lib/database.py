@@ -4,7 +4,7 @@ import os
 
 def format_json_dump(content: dict, file_path: str) -> None:
     '''
-    用于在json**覆写**时提供格式化和设定编码，替代原来的json_dump()。
+    用于在json**覆写**时提供格式化和设定编码，替代原来的json.dump()。
 
     :param content: 要**覆写**的内容
     :param file_path: 要写入的文件路径
@@ -15,6 +15,21 @@ def format_json_dump(content: dict, file_path: str) -> None:
         ensure_ascii = False,
         indent       = 4
     )
+
+
+def format_json_dumps(content: dict) -> str:
+    '''
+    用于将dict转换为json字符串时提供格式化和设定编码，替代原来的json.dumps()。
+
+    :param content: 要转换的内容
+    
+    :return: 转换而来的json字符串
+    '''
+    return json.dumps(
+        content,
+        ensure_ascii = False,
+        indent       = 4
+    ).encode('UTF-8')
 
 
 def load_data() -> dict[str]:

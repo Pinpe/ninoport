@@ -141,6 +141,28 @@
         /* 命令块：借程序的 .code-panel，只把留白调松一点 */
         .cmd { margin-bottom: 14px; }
 
+        /* 下载条：左边写清包里有什么，右边一个按钮 */
+        .get-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px 24px;
+            align-items: center;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--r-lg);
+            padding: 20px 22px;
+            margin-bottom: 30px;
+        }
+
+        .get-box-text { flex: 1; min-width: 15em; }
+        .get-box-text h3 { font-size: 1.02rem; margin-bottom: 6px; }
+        .get-box-text p { margin: 0; color: var(--text-2); font-size: .9rem; line-height: 1.68; }
+
+        .sub-h {
+            font-size: 1.02rem;
+            margin: 0 0 10px;
+        }
+
         .site-foot {
             margin-top: 84px;
             padding-top: 26px;
@@ -171,7 +193,7 @@
             <span class="brand-name">NinoPort</span>
             <span class="brand-tail">AI 端口</span>
         </a>
-        <span class="brand-version">v1.3.0</span>
+        <span class="brand-version">v1.4.0</span>
         <div class="topbar-spacer"></div>
         <a class="btn btn-ghost" href="https://github.com/Pinpe/ninoport">
             在 GitHub 上看
@@ -191,9 +213,10 @@
             配置和上下文只躺在你自己电脑上的几个 JSON 文件里。
         </p>
         <div class="hero-actions">
-            <a class="btn btn-primary" href="https://github.com/Pinpe/ninoport">
-                看源码
+            <a class="btn btn-primary" href="https://github.com/Pinpe/ninoport/releases/latest">
+                下载 Windows 版
             </a>
+            <a class="btn btn-ghost" href="https://github.com/Pinpe/ninoport">看源码</a>
             <a class="btn btn-ghost" href="#start">快速开始</a>
         </div>
     </section>
@@ -223,6 +246,11 @@
                    填错了当场能看见，想抄走也随手。</p>
             </div>
             <div class="feat-card">
+                <h3>测试连接</h3>
+                <p>填完表单先点一下「测试连接」，它拿这套配置真发一条消息出去。
+                   通了把回复原样给你看，不通就把接口那边的话贴回来，不用建完再进对话页试。</p>
+            </div>
+            <div class="feat-card">
                 <h3>系统提示词</h3>
                 <p>留空就完全不发 system 消息，不塞空字符串。Responses 走的话，
                    它会单独变成 <code>instructions</code>；Anthropic 则是顶层的
@@ -250,6 +278,12 @@
                 <p>上下文导出成 JSON，也能拿回来导入。导入前先校验文件里是不是
                    一个合格的数组，不对就不让提交。</p>
             </div>
+            <div class="feat-card">
+                <h3>Agent 接口</h3>
+                <p>一组 <code>/agent</code> 路由，用 <code>curl</code> 就能给某个实例发消息、
+                   读它的上下文，不用开浏览器。参数说明在
+                   <code>127.0.0.1:5000/agent</code>。</p>
+            </div>
         </div>
     </section>
 
@@ -276,8 +310,24 @@
     <!-- ── 快速开始 ──────────────────────────────────────────────────────── -->
     <section class="sec" id="start">
         <h2>跑起来</h2>
+
+        <div class="get-box">
+            <div class="get-box-text">
+                <h3>Windows · 下下来就能用</h3>
+                <p>每次发版都会自动打一个 <code>NinoPort-*-windows.zip</code>，里面是
+                   <code>NinoPort.exe</code>、一个空的 <code>database/</code> 文件夹、许可和说明。
+                   解压双击就开窗，模板和静态文件都塞在 exe 里，不用装 Python。
+                   exe 没签名，Windows 可能先拦一下，点「更多信息」→「仍要运行」。</p>
+            </div>
+            <a class="btn btn-primary" href="https://github.com/Pinpe/ninoport/releases/latest">
+                去 Releases 下载
+            </a>
+        </div>
+
+        <h3 class="sub-h">或者从源码跑</h3>
         <p class="sec-lead">
             需要 Python 3.11 或更高版本（用到了 <code>typing.Unpack</code>）。
+            macOS 和 Linux 目前只有这条路。
         </p>
 
         <pre class="code-panel cmd">git clone https://github.com/Pinpe/ninoport.git

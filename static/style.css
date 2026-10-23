@@ -563,6 +563,21 @@ svg { display: block; }
     background: var(--surface);
 }
 
+/* ── 测试连接 · 结果弹窗 ──────────────────────────────────────────────────── */
+.ping-body {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: .84rem;
+    line-height: 1.6;
+    color: var(--text);
+    white-space: pre-wrap;      /* 模型回的长段落要能折行，别撑出一行到底 */
+    word-break: break-word;
+}
+
+/* 副标题临时借用成功／失败两种颜色，成功沿用页面那点草绿 */
+.modal-sub.is-ok  { color: #4E7040; }
+.modal-sub.is-err { color: var(--danger); }
+
 .modal-foot .spacer { flex: 1; }
 
 .modal-foot-note {
