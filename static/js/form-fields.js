@@ -14,3 +14,4 @@ export var thinkInput      = $('thinking');
 export var effortInput     = $('reasoning-effort');
 export var systemInput     = $('system-prompt');
 export var saveCtxInput    = $('save-context');
+export var streamInput     = $('stream');

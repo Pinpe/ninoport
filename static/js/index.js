@@ -10,6 +10,7 @@ import './instance-form.js';      /* 创建 / 编辑弹窗 */
 import './delete-instance.js';    /* 删除确认 */
 import './context-manage.js';     /* 管理上下文：导出 / 导入 / 清空 */
 import './ping.js';               /* 测试连接 */
+import './theme.js';              /* 深色模式开关 */
 
 /* ── 关于 ─────────────────────────────────────────────────────────── */
 var aboutModal = $('about-modal');

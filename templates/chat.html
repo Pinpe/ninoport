@@ -12,6 +12,17 @@
           href="{{ url_for('static', filename='favicon-64.png') }}">
     <link rel="apple-touch-icon"
           href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <!-- 主题要在样式表之前定下来，不然每开一页都先闪一下浅色再翻黑。
+         没手动选过就跟系统走；点过开关之后 localStorage 里就有值了 -->
+    <script>
+        (function () {
+            try {
+                var theme = localStorage.getItem('ninoport-theme')
+                    || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (e) {}
+        })();
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <!-- AI 的回复按 markdown 渲染：marked 负责解析，DOMPurify 负责消毒 ——
          模型吐出来的原始 HTML 一律不许直接进 DOM。
@@ -33,6 +44,19 @@
         <div class="chat-title">
             <span class="chat-id">#{{ iid }}</span>
         </div>
+        <button type="button" class="icon-btn js-theme"
+                title="切换深色" aria-label="切换深色">
+            <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20.6 14.4A8.6 8.6 0 0 1 9.6 3.4a8.6 8.6 0 1 0 11 11Z"/>
+            </svg>
+            <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="4.2"/>
+                <path d="M12 2.8v2.1M12 19.1v2.1M2.8 12h2.1M19.1 12h2.1
+                         M5.5 5.5l1.5 1.5M17 17l1.5 1.5M18.5 5.5L17 7M7 17l-1.5 1.5"/>
+            </svg>
+        </button>
     </header>
 
     <main class="chat-scroll" id="chat-scroll">
@@ -53,10 +77,29 @@
                 {% set role = message_type_list[idx] %}
                 {% set text = message_content_list[idx] %}
                 {% set is_err = role == 'error' %}
-                <div class="msg-row {{ 'msg-user' if role == 'user' else 'msg-ai' }}">
+                {# 一个字的 AI 行是后端给这一轮刚占的位，不是真回复。
+                   画出来就是一个空气泡 —— 流式中途刷新、或者早先中断
+                   留下的空行，都会变成这种东西，一律跳过 #}
+                {% if role != 'assistant' or text != '' %}
+                <div class="msg-row {{ 'msg-user' if role == 'user' else 'msg-ai' }}"
+                     {% if role == 'user' %}data-index="{{ idx }}"{% endif %}>
                     <div class="bubble{{ ' is-error' if is_err else '' }}">
                         {# 只有正常的 AI 回复走 markdown；你说的、报错的都保持原样 #}
                         <div class="bubble-text{{ ' js-md' if role == 'assistant' and not is_err else '' }}">{{ text }}</div>
+                        {# 撤回这一问一答：index 指的是「说的那条」在 context 里的位置，
+                           后端顺手把紧跟着的回复一起删掉 #}
+                        {% if role == 'user' %}
+                            <button type="button" class="msg-recall"
+                                    title="撤回这一问一答，原文放回输入框"
+                                    aria-label="撤回这一问一答">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M9 14 4 9l5-5"/>
+                                    <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>
+                                </svg>
+                                <span>撤回</span>
+                            </button>
+                        {% endif %}
                         {# 复制的是渲染前的 markdown 原文，不是屏幕上那排好看的 #}
                         {% if role == 'assistant' and not is_err %}
                             <button type="button" class="msg-copy"
@@ -72,6 +115,7 @@
                         {% endif %}
                     </div>
                 </div>
+                {% endif %}
             {% endfor %}
 
         </div>
@@ -97,6 +141,7 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='js/theme.js') }}"></script>
 
 </body>
 </html>

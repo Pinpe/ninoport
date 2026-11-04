@@ -9,6 +9,7 @@
 :root {
     /* 纸与墨 */
     --bg:          #F0EEE6;   /* 页面底色，暖米白 */
+    --bg-rgb:      240, 238, 230;  /* 同一张纸的 RGB，给顶栏那种半透明毛玻璃用 */
     --surface:     #FBFAF7;   /* 卡片 / 弹窗面板 */
     --surface-2:   #F5F3EC;   /* 次级面板、代码块底 */
     --surface-3:   #FFFFFF;   /* 气泡、输入框 */
@@ -37,6 +38,14 @@
     --code-num:    #8A6A3B;
     --code-com:    #A29D92;
 
+    /* 落在陶土色／危险色实心底上的字，深色模式下会翻过来 */
+    --on-accent:   #FFFFFF;
+    --danger-deep: #9C3826;
+    --ok:          #4E7040;
+
+    /* 表单控件和滚动条跟着主题走（Chrome 认这个） */
+    color-scheme: light;
+
     /* 形状 */
     --r-sm: 8px;
     --r-md: 12px;
@@ -61,6 +70,55 @@
                   'Microsoft YaHei', system-ui, sans-serif;
     --font-mono:  'JetBrainsMonoNL Nerd Font', 'JetBrains Mono', 'Noto Sans Mono',
                   ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+/* ── 深色 ───────────────────────────────────────────────────────────────────
+   不是把颜色反过来，是把纸换成夜里那张：底色偏暖褐而不是纯黑，不然
+   米白的字会发飘；陶土色提亮一档，在暗底上还看得出来；压在陶土色上的
+   字（按钮、你自己的气泡）改成深色，浅底浅字是看不清的。
+
+   ⚠️ 只覆盖变量，别在这儿重写具体组件 —— 组件全都吃 var()，
+   覆盖变量才是唯一一份真相。 */
+[data-theme="dark"] {
+    color-scheme: dark;
+
+    --bg:          #1B1917;
+    --bg-rgb:      27, 25, 23;
+    --surface:     #242220;
+    --surface-2:   #2B2926;
+    --surface-3:   #33302C;
+
+    --text:        #EAE6DC;
+    --text-2:      #A9A398;
+    --text-3:      #7A746A;
+
+    --line:        #383530;
+    --line-2:      #4A453E;
+
+    --clay:        #E08A69;
+    --clay-deep:   #EE9E81;
+    --clay-soft:   #372A24;
+    --clay-line:   #52382E;
+
+    --danger:      #E5846C;
+    --danger-deep: #F09C86;
+    --danger-soft: #3A2520;
+    --danger-line: #55332B;
+
+    --ok:          #8FBE7C;
+
+    --code-kw:     #E0926E;
+    --code-str:    #9CBE8F;
+    --code-key:    #8FB4DA;
+    --code-num:    #DDB778;
+    --code-com:    #7B756B;
+
+    /* 陶土色底上的字：暗底配深字才读得清 */
+    --on-accent:   #201D1A;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .38);
+    --shadow-md: 0 6px 24px rgba(0, 0, 0, .48);
+    --shadow-lg: 0 24px 70px rgba(0, 0, 0, .62);
 }
 
 /* ── 基础 ─────────────────────────────────────────────────────────────────── */
@@ -121,7 +179,7 @@ svg { display: block; }
     position: sticky;
     top: 0;
     z-index: 30;
-    background: rgba(240, 238, 230, .82);
+    background: rgba(var(--bg-rgb), .82);
     backdrop-filter: saturate(140%) blur(12px);
     -webkit-backdrop-filter: saturate(140%) blur(12px);
     border-bottom: 1px solid var(--line);
@@ -216,7 +274,7 @@ svg { display: block; }
 
 .btn-primary {
     background: var(--clay);
-    color: #fff;
+    color: var(--on-accent);
     border-color: var(--clay);
 }
 .btn-primary:hover { background: var(--clay-deep); border-color: var(--clay-deep); }
@@ -231,9 +289,9 @@ svg { display: block; }
 .btn-danger {
     background: var(--danger);
     border-color: var(--danger);
-    color: #fff;
+    color: var(--on-accent);
 }
-.btn-danger:hover { background: #9C3826; border-color: #9C3826; }
+.btn-danger:hover { background: var(--danger-deep); border-color: var(--danger-deep); }
 .btn-danger:focus-visible { outline-color: var(--danger); }
 
 /* 禁用：得让人一眼看出点不动 —— 导入文件格式不对时，「导入」会落在这里 */
@@ -277,6 +335,12 @@ svg { display: block; }
 .icon-btn:active { transform: scale(.92); }
 .icon-btn svg { width: 17px; height: 17px; }
 .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+
+/* 主题开关：浅色时露月亮（点一下变暗），深色时露太阳。
+   两个图标都摆在按钮里，靠主题属性决定显哪个，不用 JS 换图标 */
+.js-theme .icon-sun { display: none; }
+[data-theme="dark"] .js-theme .icon-sun  { display: block; }
+[data-theme="dark"] .js-theme .icon-moon { display: none; }
 .icon-btn.danger:hover {
     background: var(--danger-soft);
     color: var(--danger);
@@ -575,7 +639,7 @@ svg { display: block; }
 }
 
 /* 副标题临时借用成功／失败两种颜色，成功沿用页面那点草绿 */
-.modal-sub.is-ok  { color: #4E7040; }
+.modal-sub.is-ok  { color: var(--ok); }
 .modal-sub.is-err { color: var(--danger); }
 
 .modal-foot .spacer { flex: 1; }
@@ -754,8 +818,10 @@ svg { display: block; }
     font-family: var(--font-mono);
     font-size: .87rem;
     line-height: 1.5;
+    /* ⚠️ 别写成 background 整个过渡：.select 的小箭头是一张 background-image，
+       过渡一开，聚焦时它就被当成一张图去插值，看着像从左往右飞回来 */
     transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
-                background var(--dur) var(--ease);
+                background-color var(--dur) var(--ease);
 }
 
 /* 系统提示词框：不给手动拖角（在会滚的左栏里拖着别扭），改成跟着内容
@@ -795,7 +861,10 @@ svg { display: block; }
 .select:focus {
     outline: none;
     border-color: var(--clay);
-    background: var(--surface-3);
+    /* ⚠️ 这里必须写 background-color，不能写 background。简写会把
+       background-image 一起清成 none，点下去那个小箭头就没了，
+       失焦再回来的时候又整张图重放一遍 */
+    background-color: var(--surface-3);
     box-shadow: 0 0 0 3px var(--clay-soft);
 }
 
@@ -1096,7 +1165,7 @@ svg { display: block; }
 }
 
 .about-link:hover {
-    background: #fff;
+    background: var(--surface-3);
     border-color: var(--clay);
 }
 
@@ -1116,7 +1185,7 @@ svg { display: block; }
     align-items: center;
     gap: 12px;
     padding: 12px 20px;
-    background: rgba(240, 238, 230, .86);
+    background: rgba(var(--bg-rgb), .86);
     backdrop-filter: saturate(140%) blur(12px);
     -webkit-backdrop-filter: saturate(140%) blur(12px);
     border-bottom: 1px solid var(--line);
@@ -1186,7 +1255,8 @@ svg { display: block; }
 
 /* 复制这一条的 markdown 原文：平时藏着，鼠标停到气泡上才浮出来；
    触屏没有 hover，就让它一直露着（不然手机上一辈子按不到） */
-.msg-copy {
+.msg-copy,
+.msg-recall {
     position: absolute;
     bottom: -11px;
     right: -6px;
@@ -1202,21 +1272,42 @@ svg { display: block; }
     font-size: .72rem;
     line-height: 1.5;
     cursor: pointer;
+    white-space: nowrap;   /* 气泡很短的时候别把「撤回」折成两行 */
     opacity: 0;
     transform: translateY(2px);
     transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease),
                 color var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 
-.msg-copy svg { width: 12px; height: 12px; }
+.msg-copy svg,
+.msg-recall svg { width: 12px; height: 12px; }
+
+/* 撤回挂在你说的那条上，贴左下角；AI 那条的右下角已经收成尖角了 */
+.msg-recall {
+    left: -6px;
+    right: auto;
+}
 
 .msg-row.msg-ai:hover .msg-copy,
-.msg-copy:focus-visible {
+.msg-row.msg-user:hover .msg-recall,
+.msg-copy:focus-visible,
+.msg-recall:focus-visible {
     opacity: 1;
     transform: translateY(0);
 }
 
 .msg-copy:hover { color: var(--text); border-color: var(--text-3); }
+
+/* 撤回是删东西，悬上去变红一点，别跟复制长得一模一样 */
+.msg-recall:hover {
+    color: var(--danger);
+    border-color: var(--danger-line);
+}
+
+/* 这一轮还在一个字一个字长：消息区每 0.1 秒对着服务端重画一次，
+   复制按钮跟着重建，浮出动画会一遍遍重播 —— 流式期间整片收起 */
+#message-list.is-live .msg-copy,
+#message-list.is-live .msg-recall { display: none; }
 
 .msg-copy.is-done {
     color: var(--code-str);
@@ -1225,13 +1316,14 @@ svg { display: block; }
 }
 
 @media (hover: none) {
-    .msg-copy { opacity: 1; transform: none; }
+    .msg-copy,
+    .msg-recall { opacity: 1; transform: none; }
 }
 
 /* 用户：陶土色实心，右下角收一点 */
 .msg-user .bubble {
     background: var(--clay);
-    color: #fff;
+    color: var(--on-accent);
     border-bottom-right-radius: 6px;
 }
 
@@ -1412,7 +1504,7 @@ svg { display: block; }
 .composer {
     flex: none;
     border-top: 1px solid var(--line);
-    background: rgba(240, 238, 230, .9);
+    background: rgba(var(--bg-rgb), .9);
     backdrop-filter: saturate(140%) blur(12px);
     -webkit-backdrop-filter: saturate(140%) blur(12px);
 }

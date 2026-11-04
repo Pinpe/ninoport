@@ -1,4 +1,4 @@
-from typing import TypedDict, Unpack
+from typing import TypedDict, Unpack, Iterator
 from lib import base_api
 
 
@@ -10,13 +10,14 @@ class api_params_type(TypedDict):
     max_tokens: int
     thinking: bool
     reasoning_effort: str | None
+    stream: bool
 
 
 def get_api(
         api_type: str,
         messages: list[dict],
         **params: Unpack[api_params_type]
-    ) -> str:
+    ) -> Iterator[str]:
     '''
     直接将**原始**的提示词和上下文发送给AI，是与AI交互的直接接口。
 
@@ -28,14 +29,15 @@ def get_api(
     :param max_tokens: 模型输出的最大token数，超过此数会被截断
     :param thinking: 是否启用思考
     :param reasoning_effort: 模型的思考强度，当设置为None时忽略，其他字符串则原样提供给API
+    :param stream: 是否启用流式传输
     :param messages: 向AI提供的所有提示词和上下文
 
     **注意：** 因为要适配不同API，给thinking和reasoning_effort做成了两个功能差不多但是独立的两个参数。
 
-    :return: 从API端发送的AI输出
+    :return: 从API端发送的AI输出，需要注意的是，无论是否开启流式，返回的都是**累计**的输出的迭代器
     '''
     if api_type == 'chat':
-        return base_api.chat_completions(messages = messages, **params)
+        black = base_api.chat_completions(messages = messages, **params)
 
     elif api_type == 'responses' or api_type == 'anthropic':
         system = None
@@ -43,12 +45,17 @@ def get_api(
             system = messages[0]['content']
             del messages[0]
         if api_type == 'responses':
-            return base_api.responses_api(system=system, messages=messages, **params)
+            black = base_api.responses_api(system=system, messages=messages,**params)
         else:
-            return base_api.anthropic_messages_api(system=system, messages=messages, **params)
+            black = base_api.anthropic_messages_api(system=system, messages=messages,**params)
 
     else:
         raise TypeError(f'API type unknown: {api_type}')
+
+    output_text_stream = ''
+    for i in black:
+        output_text_stream += i
+        yield output_text_stream
 
 
 def create_message(

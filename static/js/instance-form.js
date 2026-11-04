@@ -6,7 +6,7 @@ import { renderCode } from './code-render.js';
 import { pingReset } from './ping.js';
 import {
     createForm, apiTypeInput, keyInput, baseInput, modelInput, maxTokensInput,
-    thinkInput, effortInput, systemInput, saveCtxInput
+    thinkInput, effortInput, systemInput, saveCtxInput, streamInput
 } from './form-fields.js';
 
 var createModal = $('create-modal');
@@ -56,6 +56,7 @@ function openForm(mode, meta, id, focusEl) {
     effortInput.value    = meta['reasoning-effort'] || '';
     systemInput.value    = meta['system-prompt'] || '';
     saveCtxInput.checked = meta['save-context'] === true;
+    streamInput.checked  = meta['stream'] === true;
 
     pingReset();   /* 换了一个实例，上一次的测试结果就别留着了 */
 

@@ -4,7 +4,7 @@
 import { $, esc } from './dom.js';
 import {
     createForm, apiTypeInput, keyInput, baseInput, modelInput, maxTokensInput,
-    thinkInput, effortInput, systemInput, saveCtxInput
+    thinkInput, effortInput, systemInput, saveCtxInput, streamInput
 } from './form-fields.js';
 
 var codeOut       = $('code-out');
@@ -41,7 +41,7 @@ function truncate(s, n) {
 }
 
 /* ── Chat Completions 版 ──────────────────────────────────────────── */
-function renderChatLines(lines, model, maxTokens, think, effort, system, saveCtx) {
+function renderChatLines(lines, model, maxTokens, think, effort, system, saveCtx, streamOn) {
     /* messages */
     var msgs = [];
     if (!saveCtx) {
@@ -58,7 +58,7 @@ function renderChatLines(lines, model, maxTokens, think, effort, system, saveCtx
     var createArgs = [
         ['model',            str('"' + (model || PLACEHOLDER.model) + '"')],
         ['max_tokens',       num(maxTokens || PLACEHOLDER.maxTokens)],
-        ['stream',           kw('False')],
+        ['stream',           kw(streamOn ? 'True' : 'False')],
         ['extra_body',       '{' + ky('"thinking"') + ': {'
                              + ky('"type"') + ': '
                              + str('"' + (think ? 'enabled' : 'disabled') + '"') + '}}'],
@@ -84,17 +84,26 @@ function renderChatLines(lines, model, maxTokens, think, effort, system, saveCtx
     });
     lines.push(')');
     lines.push('');
-    lines.push(kw('print') + '(response.choices[0].message.content)');
+    if (streamOn) {
+        lines.push(kw('for') + ' chunk ' + kw('in') + ' response:');
+        lines.push('    ' + com('# 流式：一块只带几个新字，得自己攒起来'));
+        lines.push('    delta = chunk.choices[0].delta.content');
+        lines.push('    ' + kw('if') + ' delta ' + kw('is not') + ' ' + kw('None') + ':');
+        lines.push('        ' + kw('print') + '(delta, end=' + str('""') + ', flush=' + kw('True') + ')');
+    } else {
+        lines.push(kw('print') + '(response.choices[0].message.content)');
+    }
 }
 
 /* ── OpenAI Responses API 版 ──────────────────────────────────────── */
-function renderResponsesLines(lines, model, maxTokens, think, effort, system, saveCtx) {
+function renderResponsesLines(lines, model, maxTokens, think, effort, system, saveCtx, streamOn) {
     var w = 17; /* len('max_output_tokens') */
 
     lines.push('response = client.responses.create(');
     lines.push(arg(w, '    ', 'model', str('"' + (model || PLACEHOLDER.model) + '"')));
     /* 它不认 max_tokens，写它会被当成未知参数；这里叫 max_output_tokens */
     lines.push(arg(w, '    ', 'max_output_tokens', num(maxTokens || PLACEHOLDER.maxTokens)));
+    lines.push(arg(w, '    ', 'stream', kw(streamOn ? 'True' : 'False')));
 
     if (think) {
         lines.push(arg(w, '    ', 'reasoning',
@@ -119,17 +128,24 @@ function renderResponsesLines(lines, model, maxTokens, think, effort, system, sa
     lines.push('    ],');
     lines.push(')');
     lines.push('');
-    lines.push(kw('print') + '(response.output_text)');
+    if (streamOn) {
+        lines.push(kw('for') + ' event ' + kw('in') + ' response:');
+        lines.push('    ' + kw('if') + ' event.type == ' + str('"response.output_text.delta"') + ':');
+        lines.push('        ' + kw('print') + '(event.delta, end=' + str('""') + ', flush=' + kw('True') + ')');
+    } else {
+        lines.push(kw('print') + '(response.output_text)');
+    }
 }
 
 /* ── Anthropic Messages API 版 ────────────────────────────────────── */
-function renderAnthropicLines(lines, model, maxTokens, think, effort, system, saveCtx) {
+function renderAnthropicLines(lines, model, maxTokens, think, effort, system, saveCtx, streamOn) {
     var w = 13; /* len('output_config') */
 
     lines.push('message = client.messages.create(');
     lines.push(arg(w, '    ', 'model', str('"' + (model || PLACEHOLDER.model) + '"')));
     /* Anthropic 这边 max_tokens 是必填的，少写直接 400 */
     lines.push(arg(w, '    ', 'max_tokens', num(maxTokens || PLACEHOLDER.maxTokens)));
+    lines.push(arg(w, '    ', 'stream', kw(streamOn ? 'True' : 'False')));
 
     if (think) {
         lines.push(arg(w, '    ', 'output_config',
@@ -154,9 +170,16 @@ function renderAnthropicLines(lines, model, maxTokens, think, effort, system, sa
     lines.push('    ],');
     lines.push(')');
     lines.push('');
-    lines.push(kw('print') + '(' + str('""') + '.' + ky('join') + '('
-              + 'b.text ' + kw('for') + ' b ' + kw('in') + ' message.content '
-              + kw('if') + ' b.type == ' + str('"text"') + '))');
+    if (streamOn) {
+        lines.push(kw('for') + ' event ' + kw('in') + ' message:');
+        lines.push('    ' + kw('if') + ' event.type == ' + str('"content_block_delta"')
+            + ' ' + kw('and') + ' event.delta.type == ' + str('"text_delta"') + ':');
+        lines.push('        ' + kw('print') + '(event.delta.text, end=' + str('""') + ', flush=' + kw('True') + ')');
+    } else {
+        lines.push(kw('print') + '(' + str('""') + '.' + ky('join') + '('
+                  + 'b.text ' + kw('for') + ' b ' + kw('in') + ' message.content '
+                  + kw('if') + ' b.type == ' + str('"text"') + '))');
+    }
 }
 
 /* 留空那一档，两种协议其实不一样：chat 整行都不发，responses 会发个 None，
@@ -224,6 +247,7 @@ export function renderCode() {
     var effort = effortInput.value;
     var system = systemInput.value.trim();
     var saveCtx = saveCtxInput.checked;
+    var streamOn = streamInput.checked;
 
     var apiType = apiTypeInput.value;
     if (apiType !== 'responses' && apiType !== 'anthropic') { apiType = 'chat'; }
@@ -255,11 +279,11 @@ export function renderCode() {
     lines.push('');
 
     if (apiType === 'responses') {
-        renderResponsesLines(lines, model, maxTokens, think, effort, system, saveCtx);
+        renderResponsesLines(lines, model, maxTokens, think, effort, system, saveCtx, streamOn);
     } else if (apiType === 'anthropic') {
-        renderAnthropicLines(lines, model, maxTokens, think, effort, system, saveCtx);
+        renderAnthropicLines(lines, model, maxTokens, think, effort, system, saveCtx, streamOn);
     } else {
-        renderChatLines(lines, model, maxTokens, think, effort, system, saveCtx);
+        renderChatLines(lines, model, maxTokens, think, effort, system, saveCtx, streamOn);
     }
 
     codeOut.innerHTML = lines.join('\n');

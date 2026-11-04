@@ -11,6 +11,17 @@
           href="{{ url_for('static', filename='favicon-64.png') }}">
     <link rel="apple-touch-icon"
           href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <!-- 主题要在样式表之前定下来，不然每开一页都先闪一下浅色再翻黑。
+         没手动选过就跟系统走；点过开关之后 localStorage 里就有值了 -->
+    <script>
+        (function () {
+            try {
+                var theme = localStorage.getItem('ninoport-theme')
+                    || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (e) {}
+        })();
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -24,6 +35,19 @@
         </a>
         <span class="brand-version">v{{ latest_version }}</span>
         <div class="topbar-spacer"></div>
+        <button type="button" class="icon-btn js-theme"
+                title="切换深色" aria-label="切换深色">
+            <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20.6 14.4A8.6 8.6 0 0 1 9.6 3.4a8.6 8.6 0 1 0 11 11Z"/>
+            </svg>
+            <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="4.2"/>
+                <path d="M12 2.8v2.1M12 19.1v2.1M2.8 12h2.1M19.1 12h2.1
+                         M5.5 5.5l1.5 1.5M17 17l1.5 1.5M18.5 5.5L17 7M7 17l-1.5 1.5"/>
+            </svg>
+        </button>
         <button type="button" class="icon-btn js-open-about"
                 title="关于 NinoPort" aria-label="关于 NinoPort">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
@@ -218,6 +242,16 @@
                             <span class="switch-text">
                                 <span class="switch-title">保存上下文</span>
                                 <span class="switch-desc">每轮把历史消息一起发出去；关掉就只发当前这一条。</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="field">
+                        <label class="switch-row" for="stream">
+                            <input type="checkbox" id="stream" name="stream">
+                            <span class="switch-text">
+                                <span class="switch-title">流式输出</span>
+                                <span class="switch-desc">边生成边显示：后台一轮一轮把「目前说到哪」记下来，对话页每 0.1 秒问一次。</span>
                             </span>
                         </label>
                     </div>

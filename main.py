@@ -14,10 +14,11 @@ import io
 
 # ────────────────────────────────────────────────────────────────────────────────────────
 
-ninoport: Flask     = Flask(__name__)
-server_port: int    = 5000
-database_data: dict = database.load_data()
-latest_version: str = '1.4.0'
+ninoport: Flask                          = Flask(__name__)
+server_port: int                         = 5000
+database_data: dict                      = database.load_data()
+latest_version: str                      = '1.5.0'
+send_thread_obj: threading.Thread | None = None
 
 # ────────────────────────────────────────────────────────────────────────────────────────
 
@@ -51,16 +52,17 @@ def get_input_instance_config() -> dict:
     :return: 用户在表单输入的实例属性，可以使用`get_input_instance_config()['xxx']`访问
     '''
     return {
-        'api-type': request.form.get('api-type'),
-        'api-key':  request.form.get('api-key'),
-        'base-url':  request.form.get('base-url'),
-        'model':  request.form.get('model'),
-        'max-tokens': int(request.form.get('max-tokens')),
-        'thinking':  True if request.form.get('thinking') == 'on' else False,
+        'api-type':          request.form.get('api-type'),
+        'api-key':           request.form.get('api-key'),
+        'base-url':          request.form.get('base-url'),
+        'model':             request.form.get('model'),
+        'max-tokens':        int(request.form.get('max-tokens')),
+        'thinking':          True if request.form.get('thinking') == 'on' else False,
         'reasoning-effort':  None if request.form.get('reasoning-effort') == ''
             else request.form.get('reasoning-effort'),
-        'save-context':  True if request.form.get('save-context') == 'on' else False,
-        'system-prompt': None if request.form.get('system-prompt') == ''
+        'save-context':      True if request.form.get('save-context') == 'on' else False,
+        'stream':            True if request.form.get('stream') == 'on' else False,
+        'system-prompt':     None if request.form.get('system-prompt') == ''
             else request.form.get('system-prompt')
     }
 
@@ -95,7 +97,7 @@ def ping_instance():
     instance_config = get_input_instance_config()
 
     try:
-        assistant_output = core.get_api(
+        assistant_output = next(core.get_api(
             api_type         = instance_config['api-type'],
             api_key          = instance_config['api-key'],
             base_url         = instance_config['base-url'],
@@ -103,10 +105,11 @@ def ping_instance():
             max_tokens       = 256,
             thinking         = False,
             reasoning_effort = None,
+            stream           = False,
             messages         = core.create_message(
                 system  = None,
                 history = [('user', '你好，这是一条测试消息')],
-        ))
+        )))
     except Exception as error_content:
         return ['error', str(error_content)]
     else:
@@ -133,6 +136,7 @@ def public_chat(instance_id: str):
 
 @ninoport.route('/chat/<instance_id>/send', methods=['POST'])
 def send(instance_id: str):
+    global send_thread_obj
     to_api_message_list = []
     user_input = request.form.get('user-input')
     database_data['context'][instance_id].append(('user', user_input))
@@ -144,24 +148,42 @@ def send(instance_id: str):
         if i[0] != 'error':
             to_api_message_list.append(tuple(i))
 
-    try:
-        assistant_output = core.get_api(
-            api_type         = database_data['instance'][instance_id]['api-type'],
-            api_key          = database_data['instance'][instance_id]['api-key'],
-            base_url         = database_data['instance'][instance_id]['base-url'],
-            model            = database_data['instance'][instance_id]['model'],
-            max_tokens       = database_data['instance'][instance_id]['max-tokens'],
-            thinking         = database_data['instance'][instance_id]['thinking'],
-            reasoning_effort = database_data['instance'][instance_id]['reasoning-effort'],
-            messages         = core.create_message(
-                system  = database_data['instance'][instance_id]['system-prompt'],
-                history = to_api_message_list
-        ))
-    except Exception as error_content:
-        database_data['context'][instance_id].append(('error', str(error_content)))
-    else:
-        database_data['context'][instance_id].append(('assistant', assistant_output))
+    database_data['context'][instance_id].append(['assistant', ''])
 
+    def send_thread():
+        try:
+            for i in core.get_api(
+                api_type         = database_data['instance'][instance_id]['api-type'],
+                api_key          = database_data['instance'][instance_id]['api-key'],
+                base_url         = database_data['instance'][instance_id]['base-url'],
+                model            = database_data['instance'][instance_id]['model'],
+                max_tokens       = database_data['instance'][instance_id]['max-tokens'],
+                thinking         = database_data['instance'][instance_id]['thinking'],
+                reasoning_effort = database_data['instance'][instance_id]['reasoning-effort'],
+                stream           = database_data['instance'][instance_id]['stream'],
+                messages         = core.create_message(
+                    system  = database_data['instance'][instance_id]['system-prompt'],
+                    history = to_api_message_list
+            )):
+                database_data['context'][instance_id][-1][1] = i
+        except Exception as error_content:
+            del database_data['context'][instance_id][-1]
+            database_data['context'][instance_id].append(('error', str(error_content)))
+        finally:
+            database.overwrite_data(database_data['context'], 'context')
+
+    send_thread_obj = threading.Thread(target=send_thread, daemon=True)
+    send_thread_obj.start()
+
+    return redirect(f'/chat/{instance_id}')
+
+# ────────────────────────────────────────────────────────────────────────────────────────
+
+@ninoport.route('/chat/<instance_id>/delete-one-context', methods=['POST'])
+def detele_one_context(instance_id: str):
+    i = int(request.form.get('context-index'))
+
+    del database_data['context'][instance_id][i:i+2]
     database.overwrite_data(database_data['context'], 'context')
 
     return redirect(f'/chat/{instance_id}')
@@ -253,6 +275,8 @@ def agent_send():
         data = {'user-input': user_input}
     )
 
+    send_thread_obj.join()
+
     return database.format_json_dumps(database_data['context'][instance_id][-1][1])
 
 # ────────────────────────────────────────────────────────────────────────────────────────
@@ -264,7 +288,7 @@ def reload():
 
 # ────────────────────────────────────────────────────────────────────────────────────────
 
-def ninoport_run() -> None:
+def server_run() -> None:
     ''' 启动NinoPort的Flask服务器 '''
     ninoport.run(port=server_port)
 
@@ -272,9 +296,9 @@ def ninoport_run() -> None:
 
 if __name__ == '__main__':
     if os.name == 'nt':
-        threading.Thread(target=ninoport_run, daemon=True).start()
+        threading.Thread(target=server_run, daemon=True).start()
         time.sleep(1)
         webview.create_window('NinoPort', url=f'http://127.0.0.1:{server_port}')
         webview.start()
     else:
-        ninoport_run()
+        server_run()
